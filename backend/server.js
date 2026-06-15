@@ -20,7 +20,24 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, or postman)
+    if (!origin) return callback(null, true);
+
+    const frontendUrl = process.env.FRONTEND_URL;
+    if (!frontendUrl) {
+      return callback(null, true);
+    }
+
+    const originClean = origin.replace(/\/$/, '');
+    const allowedOrigins = frontendUrl.split(',').map(url => url.trim().replace(/\/$/, ''));
+
+    if (allowedOrigins.includes(originClean) || process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
+
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 app.use(express.json({ limit: '2mb' }));
